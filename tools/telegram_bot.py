@@ -221,6 +221,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-PYEOF
-chmod +x /home/kyusan/magi/tools/telegram_bot.py
-echo "Bot creado"
