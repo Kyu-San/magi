@@ -69,21 +69,47 @@ def send_message(token: str, chat_id: int, text: str, parse_mode: str = "HTML"):
 
     for chunk in chunks:
         try:
-            tg_api(token, "sendMessage", {
-                "chat_id": chat_id,
-                "text": chunk,
-                "parse_mode": parse_mode,
-            })
+            tg_api(
+                token,
+                "sendMessage",
+                {
+                    "chat_id": chat_id,
+                    "text": chunk,
+                    "parse_mode": parse_mode,
+                },
+            )
         except Exception:
             # Reintentar sin parse_mode si falla
-            tg_api(token, "sendMessage", {
-                "chat_id": chat_id,
-                "text": chunk,
-            })
+            tg_api(
+                token,
+                "sendMessage",
+                {
+                    "chat_id": chat_id,
+                    "text": chunk,
+                },
+            )
 
 
 def run_magi(cmd: str, args: str = "") -> str:
     """Ejecuta un comando del MAGI en Docker y devuelve la salida."""
+    # Adquirir inhibitor de suspensión mientras se procesa
+    inhibitor = None
+    try:
+        inhibitor = subprocess.Popen(
+            [
+                "systemd-inhibit",
+                "--what=sleep",
+                "--who=MAGI-Telegram",
+                "--why=Procesando solicitud del MAGI",
+                "--mode=block",
+                "sleep",
+                "900",
+            ],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+    except Exception:
+        pass
     full_cmd = f"{COMPOSE} run --rm magi {cmd}"
     if args:
         full_cmd += f' "{args}"'
@@ -112,6 +138,12 @@ def run_magi(cmd: str, args: str = "") -> str:
         return "⏱ Timeout: el MAGI tardó más de 15 minutos. Intenta con una consulta más simple."
     except Exception as exc:
         return f"Error: {type(exc).__name__}: {str(exc)[:300]}"
+    finally:
+        if inhibitor:
+            try:
+                inhibitor.terminate()
+            except Exception:
+                pass
 
 
 def handle_command(token: str, chat_id: int, text: str):
@@ -130,7 +162,9 @@ def handle_command(token: str, chat_id: int, text: str):
         args = text
 
     if cmd == "/start":
-        send_message(token, chat_id,
+        send_message(
+            token,
+            chat_id,
             "🧠 <b>MAGI SYSTEM — NERV Tokyo-3</b>\n\n"
             "Tres superordenadores deliberan y votan por ti:\n"
             "• MELCHIOR-1 (la científica)\n"
@@ -142,7 +176,7 @@ def handle_command(token: str, chat_id: int, text: str):
             "/mejorar — auto-mejora del código\n"
             "/doctor — diagnóstico\n"
             "/status — estado del sistema\n\n"
-            "O simplemente escribe tu pregunta."
+            "O simplemente escribe tu pregunta.",
         )
         return
 
@@ -155,13 +189,20 @@ def handle_command(token: str, chat_id: int, text: str):
     if cmd == "/status":
         try:
             import urllib.request
+
             req = urllib.request.urlopen("http://127.0.0.1:8080/api/health", timeout=5)
             health = json.loads(req.read())
             status = "✅ Ollama OK" if health.get("ok") else "❌ Ollama no responde"
             models = health.get("modelos", "?")
-            send_message(token, chat_id, f"{status}\nModelos: {models}\nWeb GUI: http://localhost:8080")
+            send_message(
+                token,
+                chat_id,
+                f"{status}\nModelos: {models}\nWeb GUI: http://localhost:8080",
+            )
         except Exception:
-            send_message(token, chat_id, "❌ No se puede conectar al MAGI. ¿Está corriendo?")
+            send_message(
+                token, chat_id, "❌ No se puede conectar al MAGI. ¿Está corriendo?"
+            )
         return
 
     if cmd == "/ask":
@@ -176,18 +217,28 @@ def handle_command(token: str, chat_id: int, text: str):
         if not args:
             send_message(token, chat_id, "Uso: /encargo <tarea>")
             return
-        send_message(token, chat_id, "⚡ AGENCIA activada. Los tres módulos diseñan planes… (5-10 min)")
+        send_message(
+            token,
+            chat_id,
+            "⚡ AGENCIA activada. Los tres módulos diseñan planes… (5-10 min)",
+        )
         output = run_magi("encargo", args)
         send_message(token, chat_id, f"<pre>{output}</pre>")
 
     elif cmd == "/mejorar":
-        objetivo = args if args else "Analiza tu código y aplica una mejora pequeña y segura."
+        objetivo = (
+            args if args else "Analiza tu código y aplica una mejora pequeña y segura."
+        )
         send_message(token, chat_id, "🔧 Auto-mejora en curso… (5-10 min)")
         output = run_magi("mejorar", objetivo)
         send_message(token, chat_id, f"<pre>{output}</pre>")
 
     else:
-        send_message(token, chat_id, f"Comando desconocido: {cmd}\nUsa /start para ver los comandos.")
+        send_message(
+            token,
+            chat_id,
+            f"Comando desconocido: {cmd}\nUsa /start para ver los comandos.",
+        )
 
 
 def main():
@@ -196,7 +247,9 @@ def main():
 
     # Obtener info del bot
     me = tg_api(token, "getMe")
-    print(f"[MAGI-TELEGRAM] Bot: @{me['result']['username']} ({me['result']['first_name']})")
+    print(
+        f"[MAGI-TELEGRAM] Bot: @{me['result']['username']} ({me['result']['first_name']})"
+    )
 
     offset = 0
     while True:
@@ -208,8 +261,13 @@ def main():
                 chat_id = msg.get("chat", {}).get("id")
                 text = msg.get("text", "")
                 if chat_id and text:
+                    # Guardar chat_id para el monitor de GitHub
+                    chat_file = Path("/home/kyusan/magi/.telegram_chat_id")
+                    if not chat_file.exists():
+                        chat_file.write_text(str(chat_id))
                     # Procesar en un hilo para no bloquear el polling
                     import threading
+
                     t = threading.Thread(
                         target=handle_command, args=(token, chat_id, text), daemon=True
                     )
