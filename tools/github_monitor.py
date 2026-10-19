@@ -10,7 +10,9 @@ import json
 import os
 import subprocess
 import sys
-from datetime import datetime, timezone
+import time
+import urllib.request
+from datetime import datetime
 from pathlib import Path
 from urllib.request import Request, urlopen
 from urllib.error import HTTPError
@@ -58,6 +60,38 @@ def notify(title: str, body: str):
             )
         except Exception:
             pass
+
+
+def send_telegram(title: str, body: str):
+    """Envía notificación a Telegram si hay chat_id configurado."""
+    token_file = Path("/home/kyusan/magi/.telegram_token")
+    chat_file = Path("/home/kyusan/magi/.telegram_chat_id")
+    if not token_file.exists():
+        return
+    token = token_file.read_text().strip()
+    if not chat_file.exists():
+        # El bot de Telegram guarda el chat_id cuando recibe un mensaje
+        # Si no existe, intentar una vez más (puede que el bot aún no haya recibido mensajes)
+        return
+    chat_id = chat_file.read_text().strip()
+    try:
+        text = f"🔔 <b>{title}</b>\n\n{body}"
+        url = f"https://api.telegram.org/bot{token}/sendMessage"
+        payload = json.dumps(
+            {"chat_id": chat_id, "text": text, "parse_mode": "HTML"}
+        ).encode()
+        req = Request(url, data=payload, headers={"Content-Type": "application/json"})
+        with urlopen(req, timeout=10) as resp:
+            pass
+        print(f"[Telegram] Notificación enviada a {chat_id}")
+    except Exception as exc:
+        print(f"[Telegram] Error: {exc}")
+    if STATE_FILE.exists():
+        try:
+            return json.loads(STATE_FILE.read_text())
+        except Exception:
+            pass
+    return {}
 
 
 def load_state() -> dict:
@@ -176,6 +210,7 @@ def main():
     if changes:
         body = "\n".join(changes)
         notify(f"MAGI GitHub — {len(changes)} cambio(s)", body)
+        send_telegram(f"MAGI GitHub — {len(changes)} cambio(s)", body)
     else:
         ts = datetime.now().strftime("%H:%M")
         print(f"[{ts}] Sin cambios en {OWNER}/{REPO}")
