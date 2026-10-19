@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MAGI SYSTEM — NERV Tokyo-3</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #000;
+    color: #0f0;
+    font-family: 'Courier New', monospace;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+  /* ── Header ── */
+  .header {
+    text-align: center;
+    padding: 12px;
+    border-bottom: 1px solid #0f0;
+  }
+  .header h1 {
+    font-size: 1.4em;
+    letter-spacing: 4px;
+    color: #0f0;
+    text-shadow: 0 0 8px #0f0;
+  }
+  .header .sub {
+    font-size: 0.75em;
+    color: #0a0;
+    margin-top: 4px;
+  }
+
+  /* ── Main layout ── */
+  .main {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 20px;
+    gap: 20px;
+  }
+
+  /* ── Hexagon grid ── */
+  .hex-row {
+    display: flex;
+    justify-content: center;
+    gap: 40px;
+    flex-wrap: wrap;
+  }
+
+  .hexagon {
+    position: relative;
+    width: 320px;
+    height: 360px;
+    clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+    background: #0a0a0a;
+    border: 2px solid #0f0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 30px 20px;
+    transition: all 0.3s;
+  }
+  .hexagon.deliberando { border-color: #ff0; box-shadow: 0 0 20px #ff04; }
+  .hexagon.aprobado { border-color: #0f0; box-shadow: 0 0 20px #0f04; background: #001a00; }
+  .hexagon.denegado { border-color: #f00; box-shadow: 0 0 20px #f004; background: #1a0000; }
+  .hexagon.caido { border-color: #666; background: #111; }
+
+  .hexagon .codename {
+    font-size: 1.1em;
+    font-weight: bold;
+    letter-spacing: 2px;
+    margin-bottom: 4px;
+  }
+  .hexagon .forma {
+    font-size: 0.7em;
+    color: #0a0;
+    margin-bottom: 12px;
+  }
+  .hexagon .veredicto {
+    font-size: 1.3em;
+    font-weight: bold;
+    margin: 8px 0;
+    min-height: 1.5em;
+  }
+  .hexagon .veredicto.aprobado { color: #0f0; text-shadow: 0 0 10px #0f0; }
+  .hexagon .veredicto.denegado { color: #f00; text-shadow: 0 0 10px #f00; }
+  .hexagon .confianza {
+    font-size: 0.85em;
+    color: #0a0;
+    margin-bottom: 8px;
+  }
+  .hexagon .razon {
+    font-size: 0.7em;
+    color: #8f8;
+    text-align: center;
+    max-height: 80px;
+    overflow-y: auto;
+    line-height: 1.3;
+  }
+  .hexagon .status {
+    font-size: 0.65em;
+    color: #666;
+    margin-top: 8px;
+  }
+  .hexagon .spinner {
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    border: 2px solid #0a0;
+    border-top-color: #ff0;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ── Resolución panel ── */
+  .resolucion {
+    width: 90%;
+    max-width: 900px;
+    border: 2px solid #0f0;
+    padding: 16px;
+    text-align: center;
+    background: #050505;
+    margin-top: 10px;
+  }
+  .resolucion .patron {
+    font-size: 1.2em;
+    font-weight: bold;
+    color: #0f0;
+    text-shadow: 0 0 8px #0f0;
+  }
+  .resolucion .resultado {
+    font-size: 1.5em;
+    font-weight: bold;
+    margin: 8px 0;
+  }
+  .resolucion .resultado.aprobado { color: #0f0; }
+  .resolucion .resultado.denegado { color: #f00; }
+  .resolucion .tagline {
+    font-size: 0.8em;
+    color: #0a0;
+    font-style: italic;
+  }
+  .resolucion .subsistema {
+    font-size: 0.7em;
+    color: #666;
+    margin-top: 8px;
+  }
+
+  /* ── Input area ── */
+  .input-area {
+    width: 90%;
+    max-width: 900px;
+    display: flex;
+    gap: 8px;
+    margin-top: 10px;
+  }
+  .input-area input {
+    flex: 1;
+    background: #0a0a0a;
+    border: 1px solid #0f0;
+    color: #0f0;
+    padding: 10px 12px;
+    font-family: inherit;
+    font-size: 0.9em;
+  }
+  .input-area input:focus { outline: none; box-shadow: 0 0 8px #0f04; }
+  .input-area button {
+    background: #0a0a0a;
+    border: 1px solid #0f0;
+    color: #0f0;
+    padding: 10px 20px;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 0.9em;
+    letter-spacing: 2px;
+  }
+  .input-area button:hover { background: #0f0; color: #000; }
+  .input-area button:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  /* ── Objeto de evaluación ── */
+  .objeto {
+    width: 90%;
+    max-width: 900px;
+    border: 1px solid #0a0;
+    padding: 10px 14px;
+    background: #050505;
+    font-size: 0.85em;
+    color: #8f8;
+    margin-bottom: 4px;
+  }
+  .objeto .label {
+    color: #0f0;
+    font-size: 0.7em;
+    letter-spacing: 2px;
+    margin-bottom: 4px;
+  }
+
+  /* ── Footer ── */
+  .footer {
+    text-align: center;
+    padding: 12px;
+    font-size: 0.65em;
+    color: #444;
+    border-top: 1px solid #222;
+    margin-top: 20px;
+  }
+
+  /* ── Scanline effect ── */
+  body::after {
+    content: "";
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: repeating-linear-gradient(
+      0deg, transparent, transparent 2px, rgba(0,255,0,0.03) 2px, rgba(0,255,0,0.03) 4px
+    );
+    pointer-events: none;
+    z-index: 9999;
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>M A G I &nbsp; S Y S T E M</h1>
+  <div class="sub">NERV TOKYO-3 · Multi-agent Gate Integrated-system · v2.0</div>
+</div>
+
+<div class="main">
+  <!-- Objeto de evaluación -->
+  <div class="objeto" id="objeto" style="display:none;">
+    <div class="label">OBJETO DE EVALUACIÓN</div>
+    <div id="objeto-texto"></div>
+  </div>
+
+  <!-- Tres hexágonos -->
+  <div class="hex-row">
+    <div class="hexagon" id="hex-MELCHIOR-1">
+      <div class="codename" style="color:magenta;">MELCHIOR-1</div>
+      <div class="forma">la científica</div>
+      <div class="veredicto" id="ver-MELCHIOR-1">—</div>
+      <div class="confianza" id="conf-MELCHIOR-1"></div>
+      <div class="razon" id="razon-MELCHIOR-1"></div>
+      <div class="status" id="status-MELCHIOR-1">en espera</div>
+    </div>
+    <div class="hexagon" id="hex-BALTHASAR-2">
+      <div class="codename" style="color:green;">BALTHASAR-2</div>
+      <div class="forma">la madre</div>
+      <div class="veredicto" id="ver-BALTHASAR-2">—</div>
+      <div class="confianza" id="conf-BALTHASAR-2"></div>
+      <div class="razon" id="razon-BALTHASAR-2"></div>
+      <div class="status" id="status-BALTHASAR-2">en espera</div>
+    </div>
+    <div class="hexagon" id="hex-CASPER-3">
+      <div class="codename" style="color:yellow;">CASPER-3</div>
+      <div class="forma">la mujer</div>
+      <div class="veredicto" id="ver-CASPER-3">—</div>
+      <div class="confianza" id="conf-CASPER-3"></div>
+      <div class="razon" id="razon-CASPER-3"></div>
+      <div class="status" id="status-CASPER-3">en espera</div>
+    </div>
+  </div>
+
+  <!-- Resolución -->
+  <div class="resolucion" id="resolucion" style="display:none;">
+    <div class="patron" id="res-patron">—</div>
+    <div class="resultado" id="res-resultado">—</div>
+    <div class="tagline" id="res-tagline"></div>
+    <div class="subsistema" id="res-subsistema"></div>
+  </div>
+
+  <!-- Input -->
+  <div class="input-area">
+    <input type="text" id="pregunta" placeholder="Escribe tu propuesta para el MAGI…" autofocus>
+    <button id="btn-enviar" onclick="enviar()">DELIMITAR</button>
+  </div>
+</div>
+
+<div class="footer">
+  MAGI SYSTEM · NERV TOKYO-3 · Inferencia local · Sin APIs externas · Las Tres Leyes de Asimov
+</div>
+
+<script>
+  const MODS = ['MELCHIOR-1', 'BALTHASAR-2', 'CASPER-3'];
+  let evtSource = null;
+
+  function resetHexes() {
+    for (const m of MODS) {
+      const hex = document.getElementById('hex-' + m);
+      hex.className = 'hexagon';
+      document.getElementById('ver-' + m).textContent = '—';
+      document.getElementById('ver-' + m).className = 'veredicto';
+      document.getElementById('conf-' + m).textContent = '';
+      document.getElementById('razon-' + m).textContent = '';
+      document.getElementById('status-' + m).innerHTML = 'en espera';
+    }
+    document.getElementById('resolucion').style.display = 'none';
+    document.getElementById('objeto').style.display = 'none';
+  }
+
+  function enviar() {
+    const input = document.getElementById('pregunta');
+    const pregunta = input.value.trim();
+    if (!pregunta) return;
+
+    const btn = document.getElementById('btn-enviar');
+    btn.disabled = true;
+    resetHexes();
+
+    // Mostrar objeto de evaluación
+    document.getElementById('objeto').style.display = 'block';
+    document.getElementById('objeto-texto').textContent = pregunta;
+
+    // Marcar todos como deliberando
+    for (const m of MODS) {
+      const hex = document.getElementById('hex-' + m);
+      hex.className = 'hexagon deliberando';
+      document.getElementById('status-' + m).innerHTML = '<span class="spinner"></span> delibera…';
+    }
+
+    fetch('/api/deliberate', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({pregunta})
+    }).then(r => r.json()).then(data => {
+      if (data.error) {
+        alert(data.error);
+        btn.disabled = false;
+        return;
+      }
+      // Conectar SSE
+      if (evtSource) evtSource.close();
+      evtSource = new EventSource('/api/stream');
+      evtSource.addEventListener('estado', (e) => {
+        const d = JSON.parse(e.data);
+        for (const m of MODS) {
+          const st = d[m];
+          if (!st) continue;
+          const hex = document.getElementById('hex-' + m);
+          if (st.status === 'ok') {
+            hex.className = 'hexagon ' + (st.aprobado ? 'aprobado' : 'denegado');
+            const ver = document.getElementById('ver-' + m);
+            ver.textContent = st.aprobado ? 'APROBADO' : 'DENEGADO';
+            ver.className = 'veredicto ' + (st.aprobado ? 'aprobado' : 'denegado');
+            document.getElementById('conf-' + m).textContent = 'confianza ' + st.confianza + '% · ' + st.seg.toFixed(0) + 's';
+            document.getElementById('razon-' + m).textContent = st.razon;
+            document.getElementById('status-' + m).textContent = st.modelo || '';
+          } else if (st.status === 'error') {
+            hex.className = 'hexagon caido';
+            document.getElementById('ver-' + m).textContent = 'CAÍDO';
+            document.getElementById('ver-' + m).className = 'veredicto denegado';
+            document.getElementById('razon-' + m).textContent = st.error;
+            document.getElementById('status-' + m).textContent = 'módulo caído';
+          }
+        }
+      });
+      evtSource.addEventListener('resolucion', (e) => {
+        const d = JSON.parse(e.data);
+        const r = d.resolucion;
+        const panel = document.getElementById('resolucion');
+        panel.style.display = 'block';
+        document.getElementById('res-patron').textContent = r.patron + ' · ' + r.nombre;
+        const resEl = document.getElementById('res-resultado');
+        resEl.textContent = '→ ' + r.resultado;
+        resEl.className = 'resultado ' + (r.resultado === 'APROBADO' ? 'aprobado' : 'denegado');
+        document.getElementById('res-tagline').textContent = r.tagline;
+        document.getElementById('res-subsistema').textContent = 'subsistema: ' + r.subsistema + (r.caidos.length ? ' · caídos: ' + r.caidos.join(', ') : '');
+        btn.disabled = false;
+        input.value = '';
+      });
+    }).catch(err => {
+      console.error(err);
+      btn.disabled = false;
+    });
+  }
+
+  // Enter key
+  document.getElementById('pregunta').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') enviar();
+  });
+
+  // Health check
+  fetch('/api/health').then(r => r.json()).then(d => {
+    if (!d.ok) console.warn('Ollama no responde:', d.error);
+  });
+</script>
+</body>
+</html>
+PYEOF
+echo "index.html created"

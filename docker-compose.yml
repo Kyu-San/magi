@@ -35,7 +35,23 @@ services:
     stdin_open: true
     tty: true
 
-  # ── Conversor: safetensors BF16 de CASPER → GGUF Q4_K_M ─────────────
+  # ── Web GUI (diseño hexagonal MAGI) ─────────────────────────────────
+  web:
+    build: ./core
+    container_name: magi-web
+    depends_on: [ollama]
+    network_mode: host
+    environment:
+      MAGI_OLLAMA_HOST: "http://127.0.0.1:11434"
+      MAGI_EXECUTOR_URL: "http://127.0.0.1:7676"
+      MAGI_TOKEN_FILE: "/etc/magi/token"
+      TERM: ${TERM:-xterm-256color}
+    volumes:
+      - ./core:/app:rw
+      - ./logs:/app/logs:rw
+      - ./.magi_token:/etc/magi/token:ro
+    command: ["python", "web.py"]
+    entrypoint: []
   #   docker compose --profile tools build converter
   #   docker compose --profile tools run --rm converter
   converter:

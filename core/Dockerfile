@@ -5,8 +5,9 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-COPY magi.py nerv_agencia.py .
+COPY magi.py nerv_agencia.py web.py .
 COPY config.yaml* ./
+COPY static/ ./static/
 
 ENV PYTHONUNBUFFERED=1
 # `docker compose run --rm magi`          → TUI interactiva
