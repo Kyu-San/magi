@@ -92,24 +92,6 @@ def send_message(token: str, chat_id: int, text: str, parse_mode: str = "HTML"):
 
 def run_magi(cmd: str, args: str = "") -> str:
     """Ejecuta un comando del MAGI en Docker y devuelve la salida."""
-    # Adquirir inhibitor de suspensión mientras se procesa
-    inhibitor = None
-    try:
-        inhibitor = subprocess.Popen(
-            [
-                "systemd-inhibit",
-                "--what=sleep",
-                "--who=MAGI-Telegram",
-                "--why=Procesando solicitud del MAGI",
-                "--mode=block",
-                "sleep",
-                "900",
-            ],
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-        )
-    except Exception:
-        pass
     full_cmd = f"{COMPOSE} run --rm magi {cmd}"
     if args:
         full_cmd += f' "{args}"'
@@ -138,12 +120,6 @@ def run_magi(cmd: str, args: str = "") -> str:
         return "⏱ Timeout: el MAGI tardó más de 15 minutos. Intenta con una consulta más simple."
     except Exception as exc:
         return f"Error: {type(exc).__name__}: {str(exc)[:300]}"
-    finally:
-        if inhibitor:
-            try:
-                inhibitor.terminate()
-            except Exception:
-                pass
 
 
 def handle_command(token: str, chat_id: int, text: str):
