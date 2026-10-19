@@ -1,0 +1,23 @@
+name: MAGI GitHub Notify
+
+on:
+  push:
+  issues:
+    types: [opened, closed, reopened]
+  pull_request:
+    types: [opened, closed, reopened, merged]
+  release:
+    types: [published]
+  star:
+    types: [created]
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Report event
+        run: |
+          echo "::notice::Evento: ${{ github.event_name }} en ${{ github.repository }}"
+          echo "Actor: ${{ github.actor }}"
+          echo "Ref: ${{ github.ref }}"
+          echo "SHA: ${{ github.sha }}"
