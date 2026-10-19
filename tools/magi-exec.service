@@ -1,0 +1,11 @@
+[Unit]
+Description=MAGI EXECUTOR — puente de ejecución responsable hacia el host
+After=default.target
+
+[Service]
+ExecStart=/usr/bin/python3 /home/kyusan/magi/tools/magi_executor.py
+Restart=on-failure
+RestartSec=3
+
+[Install]
+WantedBy=default.target

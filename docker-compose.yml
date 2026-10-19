@@ -1,0 +1,55 @@
+name: magi
+
+services:
+  # ── Motor de inferencia (los tres superordenadores viven aquí) ──────
+  ollama:
+    image: ollama/ollama:latest
+    container_name: magi-ollama
+    restart: unless-stopped
+    volumes:
+      - ollama-data:/root/.ollama
+      - ./models:/models                 # GGUF de CASPER convertido + Modelfile
+    ports:
+      - "127.0.0.1:11434:11434"          # solo local: pruebas con curl
+    environment:
+      OLLAMA_NUM_PARALLEL: "1"           # cola limpia por modelo (la ráfaga x3 engendra el cuelgue del scheduler)
+      OLLAMA_MAX_LOADED_MODELS: "3"      # mantén los 3 cargados en RAM
+      OLLAMA_KEEP_ALIVE: "24h"
+    networks: [magi-net]
+
+  # ── Núcleo MAGI (orquestador + votación + TUI) ──────────────────────
+  magi:
+    build: ./core
+    container_name: magi-core
+    depends_on: [ollama]
+    network_mode: host                       # conexión directa con tu PC
+    environment:
+      MAGI_OLLAMA_HOST: "http://127.0.0.1:11434"
+      MAGI_EXECUTOR_URL: "http://127.0.0.1:7676"  # puente responsable al host
+      MAGI_TOKEN_FILE: "/etc/magi/token"
+      TERM: ${TERM:-xterm-256color}
+    volumes:
+      - ./core:/app:rw                       # CUARTEL DE AUTO-ESCRITURA (AGENCIA)
+      - ./logs:/app/logs:rw                  # bitácora (no puede borrarla: Ley 3)
+      - ./.magi_token:/etc/magi/token:ro     # credencial del ejecutor
+    stdin_open: true
+    tty: true
+
+  # ── Conversor: safetensors BF16 de CASPER → GGUF Q4_K_M ─────────────
+  #   docker compose --profile tools build converter
+  #   docker compose --profile tools run --rm converter
+  converter:
+    build: ./tools/converter
+    container_name: magi-converter
+    profiles: [tools]
+    volumes:
+      - ./models/data:/data      # descarga del repo sese-snu (HF cache)
+      - ./models/out:/out        # aquí nace casper-sese-Q4_K_M.gguf
+    environment:
+      HF_HUB_ENABLE_HF_TRANSFER: "1"
+
+networks:
+  magi-net:
+
+volumes:
+  ollama-data:

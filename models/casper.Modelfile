@@ -1,0 +1,16 @@
+# Modelfile para CASPER-3 — construido sobre el GGUF convertido
+# de sese-snu/Llama3-Uncensored-bysese (base Meta-Llama-3-8B).
+# Registro: docker exec magi-ollama ollama create casper-sese:Q4_K_M -f /models/casper.Modelfile
+FROM /models/out/casper-sese-Q4_K_M.gguf
+
+TEMPLATE """{{ if .System }}<|start_header_id|>system<|end_header_id|>
+
+{{ .System }}<|eot_id|>{{ end }}{{ if .Prompt }}<|start_header_id|>user<|end_header_id|>
+
+{{ .Prompt }}<|eot_id|>{{ end }}<|start_header_id|>assistant<|end_header_id|>
+
+{{ .Response }}<|eot_id|>"""
+PARAMETER stop "<|start_header_id|>"
+PARAMETER stop "<|end_header_id|>"
+PARAMETER stop "<|eot_id|>"
+PARAMETER num_ctx 2048

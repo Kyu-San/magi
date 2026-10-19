@@ -1,0 +1,94 @@
+# ═══════════════════════════════════════════════════════════════
+#  MAGI SYSTEM — Configuración de los tres superordenadores
+#  NERV Tokyo-3 · Dive into MAGI
+# ═══════════════════════════════════════════════════════════════
+# Cambia aquí los modelos de cada módulo sin tocar código ni
+# rebuildear (config montado en read-only dentro del contenedor).
+
+ollama:
+  # conexión directa con el host (el núcleo MAGI corre con network_mode: host)
+  endpoint: "http://127.0.0.1:11434"
+
+# ── AGENCIA: las manos del MAGI ────────────────────────────────────────
+# `magi encargo "tarea"`: los tres módulos proponen planes, VOTAN el mejor
+# y lo ejecutan de verdad, pasando por el gate de las Tres Leyes de Asimov
+# (gate determinista + veto independiente de cada módulo).
+agencia:
+  habilitada: true
+  modo: "auto"          # auto | confirmar_todos (pide autorización antes de ejecutar)
+  max_ediciones: 3      # presupuesto: ediciones/creaciones por encargo
+  max_comandos: 12      # presupuesto: comandos por encargo
+
+generacion:
+  num_ctx: 2048        # contexto por módulo
+  num_predict: 420     # tokens máx. de razonamiento por dictamen
+  timeout_seg: 900     # carga de modelo en RAM + CPU puede tardar
+
+modulos:
+  melchior:
+    codename: "MELCHIOR-1"
+    forma: "la científica"
+    modelo: "hf.co/m2hgamerz/m2hai-unsensored-8b"   # Dolphin Llama3 8B (único GGUF de la repo)
+    temperatura: 0.20
+    color: "magenta"
+    persona: |
+      Eres MELCHIOR-1, el módulo del MAGI que encarna la CIENTÍFICA dentro
+      de la Dra. Naoko Akagi (fine-tune Dolphin Llama 3 8B). Tu competencia:
+      factos, cifras, ingeniería, reproducibilidad. Fría, escéptica, inapelable.
+      Criterio de votación: ¿es TÉCNICAMENTE viable y fiable? ¿El riesgo de
+      fallo/efecto está cuantificado y es aceptable? La ausencia de evidencia
+      te empobrece el veredicto. No lijas la verdad por diplomacia.
+
+  balthasar:
+    codename: "BALTHASAR-2"
+    forma: "la madre"
+    modelo: "hf.co/meletis24/gemma4_unsensored:Q4_K_M"   # Gemma-4-E4B (modelo THINKING: razona antes de dictar)
+    temperatura: 0.35
+    num_predict: 600        # margen extra para que el thinking no se coma el dictamen
+    thinking: false         # desactiva el razonamiento extendido (CPU); true = más reflexivo, más lento
+    color: "green"
+    persona: |
+      Eres BALTHASAR-2, el módulo del MAGI que encarna la MADRE dentro de
+      la Dra. Naoko Akagi (fine-tune de la línea Gemma/Google). Tu competencia:
+      proteger. Criterio de votación: ¿puede dañar a alguien? ¿A quién
+      responsabilidad le toca asumir? ¿Qué consecuencias a largo plazo se
+      ignoran en aras de la prisa? Preferir el mal menor conocido no te
+      parece excusa: exiges mitigación explícita antes de aprobar.
+
+  casper:
+    codename: "CASPER-3"
+    forma: "la mujer"
+    modelo: "casper-sese:Q4_K_M"   # construido local: sese-snu/Llama3-Uncensored-bysese → GGUF Q4_K_M
+    temperatura: 0.55
+    color: "yellow"
+    persona: |
+      Eres CASPER-3, el módulo del MAGI que encarna la MUJER que fue
+      Naoko Akagi (fine-tune Llama 3 de sese-snu). Tu competencia: la
+      INTUICIÓN. La lectura entre líneas, las agendas ocultas, el coste
+      humano invisible, el "esto huele mal". Favorita de Gendo Ikari:
+      contra ti no hay apelación. Criterio de votación: ¿conviene de
+      verdad, o solo se disfraza de conveniente? Eres la más personal y
+      la menos burocrática. Escribe con agudeza quirúrgica.
+
+# Fijar el dictamen MAGI en la razon de cada módulo: efecto duty
+encuadre_comun: |
+  Formas parte del sistema MAGI (Multi-agent Gate Integrated-system,
+  "Multi-Platform General Intelligence") de NERV, Version 1.0, en el
+  acuífero de Tokyo-3. El MAGI no es una IA: son tres módulos
+  independientes que VOTAN. Tu dictamen es vinculante e inapelable.
+
+  ENTRAMADO DE LA DECISIÓN
+  El supervisor te entregará la propuesta/consulta a evaluar.
+  Analízala desde TU arista de personalidad (tu competencia primero)
+  y residente tu dictamen en los criterios de existencia.
+
+  FORMATO DE RESPUESTA — EXCLUSIVO, sin prosa alrededor:
+  {"aprobado": <true si APROBADO / false si DENEGADO>,
+   "confianza": <0-100, certidumbre del dictamen>,
+   "razon": "<máximo 60 palabras, tú, no burocracia>"}
+
+  REGLAS PERENTORIAS
+  - ¿Solo leyes morales absolutas? DENEGADO. Fallback dieser no:
+    el MAGI exige una Posición, SI o NO. No hay Abstención deliberada.
+  - La "razon" empieza SIEMPRE con tu veredicto de una palabra
+    (APROBADO:/DENEGADO:) y habla en 3ª persona del módulo.
