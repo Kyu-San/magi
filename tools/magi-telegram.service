@@ -1,0 +1,12 @@
+[Unit]
+Description=MAGI TELEGRAM BOT — puente Telegram↔MAGI
+After=default.target magi-exec.service
+
+[Service]
+ExecStart=/usr/bin/python3 /home/kyusan/magi/tools/telegram_bot.py
+Restart=on-failure
+RestartSec=5
+Environment="TELEGRAM_BOT_TOKEN="
+
+[Install]
+WantedBy=default.target
